@@ -1,5 +1,6 @@
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzOAzqiQ2aFJU9omfQeDPC0h_PThCO7hpaCPmudBJXMZv-MRPozRN-BS_uJJsTGUjus/exec";
+const API_URL =
+"https://script.google.com/macros/s/AKfycbzOAzqiQ2aFJU9omfQeDPC0h_PThCO7hpaCPmudBJXMZv-MRPozRN-BS_uJJsTGUjus/exec";
 
 function drawName() {
   const psno = document.getElementById("psno").value.trim();
@@ -8,39 +9,37 @@ function drawName() {
     return;
   }
 
-  // One device = one identity
+  // Simple device id (safe everywhere)
   let deviceId = localStorage.getItem("device_id");
   if (!deviceId) {
-    deviceId = crypto.randomUUID();
+    deviceId = "DEV-" + Date.now();
     localStorage.setItem("device_id", deviceId);
   }
 
-  fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      psno: psno,
-      device: deviceId
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.error) {
-      alert(data.error);
-    } else {
-      document.getElementById("result").style.display = "block";
-      document.getElementById("result").innerText =
-        "🎁 You got: " + data.success;
+  const formData = new FormData();
+  formData.append("psno", psno);
+  formData.append("device", deviceId);
 
-      // lock this device forever
-      localStorage.setItem("drawDone", "true");
+  fetch(API_URL + "?t=" + Date.now(), {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.text())
+  .then(result => {
+    if (result === "INVALID_PS") {
+      alert("❌ Invalid PS Number");
+    } else if (result === "PS_USED") {
+      alert("⚠️ PS Number already used");
+    } else if (result === "NO_NAMES") {
+      alert("🎄 All names assigned");
+    } else {
+      document.getElementById("result").innerText =
+        "🎁 You got: " + result;
     }
   })
   .catch(err => {
-    alert("Connection error. Please try again.");
     console.error(err);
+    alert("Network error");
   });
 }
 </script>
