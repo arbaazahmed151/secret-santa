@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secret Santa – Secure Chit Draw</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ffecd2, #fcb69f);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 25px;
+      border-radius: 14px;
+      width: 480px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    }
+    h2 { text-align: center; }
+    input, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background: #d6336c;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover { background: #b02a58; }
+    .result {
+      margin-top: 15px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      display: none;
+      text-align: center;
+      font-weight: bold;
+    }
+    .admin {
+      margin-top: 20px;
+      display: none;
+      background: #e9ecef;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>🎅 Secret Santa – Secure Draw</h2>
+
+  <label>Enter Your PS No.</label>
+  <input type="text" id="psno" placeholder="e.g. PS1234" />
+  <button onclick="drawName()">Draw My Chit</button>
+
+  <div class="result" id="result"></div>
+
+  <hr>
+  <h4>Admin Login</h4>
+  <input type="password" id="adminPass" placeholder="Enter admin password" />
+  <button onclick="adminLogin()">Login as Admin</button>
+
+  <div class="admin" id="adminPanel">
+    <b>Assignment Log</b><br><br>
+    <div id="log"></div>
+    <button onclick="exportExcel()">Export to Excel</button>
+    <button onclick="exportPDF()">Export to PDF</button>
+  </div>
+</div>
+
+<script>
+  // ===== SECURITY SETTINGS =====
+  const ADMIN_PASSWORD = "admin123"; // CHANGE THIS
+
+  // ===== DATABASE (LOCKED) =====
+  const allNames = [
+"S Rajagopalan",
+"Sanjay Pandey",
+"K A Arun",
+"Sachin Raut",
+"Kamal Somani",
+"Indrajit Basu",
+"Bichitra Panda",
+"Asif Shaikh",
+"Jatin Sikri",
+"Pankaj Lachhani",
+"Jaideep Deshmukh",
+"Nitesh Jajoo",
+"Lopesh Patel",
+"Tushar Satija",
+"Shreya S Godbole",
+"Rajeshwar Bendre",
+"Sharon James",
+"Shivangi Singh",
+"Arbaaz Ahmed",
+"Virendra Singh Rathore",
+"Harshada Ketkar",
+"Gaurang Thakore",
+"Hardek Mohire",
+"Richa Bhatia",
+"Poorvi Gupta",
+"Pritam Mantri",
+"Aryan Jhaiharia"
+  ];
+
+  let availableNames = [...allNames];
+  let assignments = {};          // PS No -> Name
+  let deviceUsed = false;        // One draw per device
+
+  const resultDiv = document.getElementById('result');
+  const adminPanel = document.getElementById('adminPanel');
+  const logDiv = document.getElementById('log');
+
+  function drawName() {
+    const psno = document.getElementById('psno').value.trim();
+
+    if (!psno) return alert("Enter PS No.");
+
+    // Device-level lock (one time only)
+    if (localStorage.getItem('drawDone')) {
+      alert("This device has already completed a draw.");
+      return;
+    }
+
+    // PS No cannot be reused
+    if (assignments[psno]) {
+      alert("This PS No. has already drawn a chit.");
+      return;
+    }
+
+    if (availableNames.length === 0) {
+      alert("All names have been assigned.");
+      return;
+    }
+
+    const picked = availableNames[Math.floor(Math.random() * availableNames.length)];
+
+    assignments[psno] = picked;
+    availableNames = availableNames.filter(n => n !== picked);
+
+    // Lock device permanently
+    localStorage.setItem('drawDone', 'true');
+
+    resultDiv.style.display = "block";
+    resultDiv.textContent = `🎁 You got: ${picked}`;
+
+    logDiv.innerHTML += `${psno} ➜ ${picked}<br>`;
+  }
+
+  function adminLogin() {
+    const pass = document.getElementById('adminPass').value;
+    if (pass === ADMIN_PASSWORD) {
+      adminPanel.style.display = 'block';
+    } else {
+      alert('Wrong password');
+    }
+  }
+
+  // Lock refresh / back
+  window.onbeforeunload = function () {
+    return "Data will be lost if you refresh.";
+  };
+
+  // ===== EXPORT FUNCTIONS =====
+  function exportExcel() {
+    let csv = "PS No,Assigned Name\n";
+    for (let k in assignments) csv += `${k},${assignments[k]}\n`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "secret_santa.csv";
+    a.click();
+  }
+
+  function exportPDF() {
+    let text = "Secret Santa Assignments\n\n";
+    for (let k in assignments) text += `${k} ➜ ${assignments[k]}\n`;
+    const blob = new Blob([text], { type: 'application/pdf' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "secret_santa.pdf";
+    a.click();
+  }
+</script>
+</body>
+</html>
